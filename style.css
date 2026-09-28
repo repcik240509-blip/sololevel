@@ -1,104 +1,90 @@
 :root {
-    --bg-dark: #010613;
-    --sys-blue: #0088ff;
-    --sys-blue-glow: rgba(0, 136, 255, 0.4);
-    --sys-dark-blue: #001a33;
-    --hp-red: #ff2a2a;
-    --exp-green: #00ff88;
-    --gold: #ffd700;
-    --text-main: #e2e8f0;
+    --bg-color: #030712;
+    --glass-bg: rgba(17, 24, 39, 0.7);
+    --glass-border: rgba(59, 130, 246, 0.3);
+    --neon-blue: #3b82f6;
+    --neon-blue-glow: #60a5fa;
+    --neon-red: #ef4444;
+    --neon-green: #10b981;
+    --neon-gold: #fbbf24;
+    --text-main: #f3f4f6;
+    --text-muted: #9ca3af;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Rajdhani', monospace; user-select: none; -webkit-tap-highlight-color: transparent; }
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Rajdhani', sans-serif; user-select: none; -webkit-tap-highlight-color: transparent; }
 
-body {
-    background-color: var(--bg-dark);
-    background-image: linear-gradient(0deg, #000000 0%, #010c1c 100%);
-    color: var(--text-main); display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden;
-}
+body { background: var(--bg-color) radial-gradient(circle at 50% 0%, #1e3a8a 0%, transparent 60%); color: var(--text-main); display: flex; justify-content: center; height: 100vh; overflow: hidden; }
 
-#loading-screen { display: flex; justify-content: center; align-items: center; height: 100vh; }
-.system-loader { color: var(--sys-blue); font-size: 24px; text-shadow: 0 0 15px var(--sys-blue); animation: blink 1s infinite; letter-spacing: 4px; }
-@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+/* Анімація завантаження */
+#loading-screen { position: absolute; inset: 0; background: var(--bg-color); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
+.loader-circle { width: 60px; height: 60px; border: 4px solid transparent; border-top-color: var(--neon-blue); border-bottom-color: var(--neon-blue); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; box-shadow: 0 0 20px var(--neon-blue); }
+.system-text { font-size: 20px; font-weight: 700; letter-spacing: 4px; color: var(--neon-blue); text-shadow: 0 0 10px var(--neon-blue); animation: pulse 1.5s infinite; }
+@keyframes spin { 100% { transform: rotate(360deg); } }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
-#game-container {
-    width: 100vw; height: 100vh; max-width: 800px;
-    background: url('https://www.transparenttextures.com/patterns/cubes.png'), rgba(1, 10, 20, 0.95);
-    border: 2px solid var(--sys-blue); box-shadow: inset 0 0 40px var(--sys-blue-glow);
-    display: flex; flex-direction: column; padding: 12px; gap: 12px;
-}
+/* Головний контейнер (Мобільний вигляд) */
+#game-container { width: 100%; max-width: 600px; height: 100%; display: flex; flex-direction: column; padding: 10px; gap: 12px; }
 
-header {
-    background: linear-gradient(90deg, rgba(0, 26, 51, 0.8) 0%, rgba(0,0,0,0) 100%);
-    border-left: 4px solid var(--sys-blue); padding: 12px; border-radius: 4px;
-}
+/* Скляні панелі */
+.glass-panel { background: var(--glass-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid var(--glass-border); border-radius: 12px; padding: 12px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); }
 
-.profile-section { display: flex; align-items: center; gap: 15px; border-bottom: 1px solid rgba(0, 136, 255, 0.2); padding-bottom: 10px; margin-bottom: 10px; }
-#player-avatar { width: 55px; height: 55px; border: 2px solid var(--sys-blue); box-shadow: 0 0 10px var(--sys-blue); background: var(--sys-dark-blue); clip-path: polygon(10% 0, 100% 0, 100% 90%, 90% 100%, 0 100%, 0 10%); object-fit: cover;}
+/* Профіль */
+.profile-row { display: flex; align-items: center; gap: 15px; margin-bottom: 12px; }
+.avatar-wrapper { position: relative; }
+#player-avatar { width: 60px; height: 60px; border-radius: 10px; border: 2px solid var(--neon-blue); object-fit: cover; }
+.rank-badge { position: absolute; bottom: -8px; right: -8px; background: #000; border: 1px solid var(--neon-blue); width: 24px; height: 24px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 14px; color: var(--neon-blue); box-shadow: 0 0 10px var(--neon-blue); }
+.profile-info h2 { font-size: 22px; text-transform: uppercase; letter-spacing: 1px; color: #fff; text-shadow: 0 0 8px var(--neon-blue); }
+.level-info { font-size: 14px; color: var(--text-muted); font-weight: 600; }
 
-.profile-info h2 { font-size: 22px; color: #fff; text-shadow: 0 0 8px var(--sys-blue); text-transform: uppercase; letter-spacing: 2px; }
-.profile-info p { font-size: 15px; color: #a1b0c9; font-weight: bold; }
+.progress-container { width: 100%; height: 16px; background: rgba(0,0,0,0.5); border-radius: 8px; position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 12px; }
+#exp-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #059669, var(--neon-green)); transition: width 0.3s ease; }
+#exp-text { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; font-size: 12px; font-weight: bold; text-shadow: 1px 1px 2px #000; }
 
-.header-stats { display: flex; justify-content: space-between; font-size: 16px; font-weight: bold; margin-top: 8px;}
+.stats-row { display: flex; justify-content: space-between; font-size: 15px; font-weight: bold; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 8px; }
+.text-gold { color: var(--neon-gold); text-shadow: 0 0 8px rgba(251, 191, 36, 0.5); }
+.text-glow { color: var(--neon-blue-glow); text-shadow: 0 0 8px var(--neon-blue); }
 
-/* Кольори рангів */
-.rank-e { color: #808080; } .rank-d { color: #4caf50; } .rank-c { color: #03a9f4; text-shadow: 0 0 8px #03a9f4;}
-.rank-b { color: #9c27b0; text-shadow: 0 0 8px #9c27b0;} .rank-a { color: #ff5722; text-shadow: 0 0 10px #ff5722;}
-.rank-s { color: #ffd700; text-shadow: 0 0 15px #ffd700, 0 0 5px #fff; font-size: 18px;}
+/* Бій */
+#main-content { display: flex; flex-direction: column; flex-grow: 1; overflow: hidden; gap: 12px; }
+#battle-area { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+.monster-header { text-align: center; margin-bottom: 20px; width: 80%; }
+#monster-name { color: var(--neon-red); font-size: 26px; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 15px var(--neon-red); margin-bottom: 8px; }
+.hp-container { height: 12px; background: #000; border-radius: 6px; position: relative; border: 1px solid rgba(239, 68, 68, 0.3); }
+#monster-hp-bar { height: 100%; width: 100%; background: var(--neon-red); box-shadow: 0 0 10px var(--neon-red); transition: width 0.1s; border-radius: 6px; }
+#monster-hp-text { position: absolute; top: -20px; width: 100%; text-align: center; font-size: 14px; font-weight: bold; }
 
-.exp-bar-container, .hp-bar-container { width: 100%; height: 18px; background: #000; border: 1px solid var(--sys-blue); position: relative; border-radius: 3px;}
-#exp-bar { height: 100%; background: var(--exp-green); box-shadow: 0 0 10px var(--exp-green); width: 0%; transition: 0.3s; }
-#monster-hp-bar { height: 100%; background: var(--hp-red); box-shadow: 0 0 10px var(--hp-red); width: 100%; transition: 0.1s; }
-#exp-text, #monster-hp-text { position: absolute; top: -2px; left: 0; right: 0; bottom: 0; text-align: center; font-size: 14px; font-weight: bold; color: #fff; text-shadow: 1px 1px 0 #000; }
+#monster-container { position: relative; cursor: crosshair; display: flex; justify-content: center; align-items: center; }
+#monster-sprite { width: 180px; height: 180px; object-fit: contain; filter: drop-shadow(0 0 20px rgba(239, 68, 68, 0.4)); animation: float 3s ease-in-out infinite; transition: transform 0.05s; }
+.hit-shake { animation: shake 0.2s cubic-bezier(.36,.07,.19,.97) both !important; filter: drop-shadow(0 0 30px #fff) brightness(1.5) !important; }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px) rotate(-5deg); } 75% { transform: translateX(8px) rotate(5deg); } }
 
-#main-content { display: flex; flex-direction: column; gap: 12px; flex-grow: 1; overflow-y: auto; padding-right: 5px; }
+/* Тексти шкоди та ефекти */
+.damage-text { position: absolute; color: #fff; font-weight: 700; font-size: 28px; pointer-events: none; animation: floatUp 0.7s forwards; text-shadow: 0 4px 4px #000, 0 0 10px red; z-index: 10; }
+.crit-text { color: var(--neon-gold); font-size: 40px; text-shadow: 0 4px 4px #000, 0 0 20px var(--neon-gold); }
+@keyframes floatUp { 0% { transform: translateY(0) scale(0.5); opacity: 1; } 100% { transform: translateY(-80px) scale(1.2); opacity: 0; } }
 
-.panel {
-    background: var(--sys-dark-blue); border: 1px solid var(--sys-blue);
-    box-shadow: 0 0 10px rgba(0, 136, 255, 0.1); padding: 12px; position: relative;
-}
-.panel::before { content: ''; position: absolute; top: 0; left: 0; width: 10px; height: 10px; border-top: 2px solid #fff; border-left: 2px solid #fff; }
-.panel::after { content: ''; position: absolute; bottom: 0; right: 0; width: 10px; height: 10px; border-bottom: 2px solid #fff; border-right: 2px solid #fff; }
+.slash-effect { position: absolute; width: 140px; height: 3px; background: #fff; box-shadow: 0 0 20px var(--neon-blue-glow); pointer-events: none; animation: slashAnim 0.15s forwards; transform-origin: center; z-index: 5; border-radius: 50%; }
+@keyframes slashAnim { 0% { transform: scale(0) rotate(45deg); opacity: 1; } 100% { transform: scale(2) rotate(45deg); opacity: 0; } }
 
-.panel h3 { color: var(--sys-blue); text-align: center; margin-bottom: 12px; text-shadow: 0 0 8px var(--sys-blue); letter-spacing: 3px; font-size: 18px;}
-.stat-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid rgba(0, 136, 255, 0.2); font-size: 16px;}
+/* Нижня панель (Керування) */
+#controls-area { height: 45%; display: flex; flex-direction: column; padding: 15px; }
+.tabs { display: flex; gap: 8px; margin-bottom: 15px; }
+.tab-btn { flex: 1; background: rgba(0,0,0,0.5); color: var(--text-muted); border: 1px solid transparent; padding: 10px 0; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.3s; }
+.tab-btn.active { background: rgba(59, 130, 246, 0.15); color: var(--neon-blue-glow); border-color: var(--neon-blue); box-shadow: 0 0 15px rgba(59, 130, 246, 0.2); }
 
-.upgrade-btn, .buy-btn, .tab-btn {
-    background: rgba(0, 136, 255, 0.1); color: var(--sys-blue); border: 1px solid var(--sys-blue);
-    padding: 6px 12px; cursor: pointer; font-weight: bold; transition: 0.2s; font-size: 14px; text-transform: uppercase; border-radius: 3px;
-}
-.upgrade-btn:hover, .buy-btn:hover, .tab-btn.active { background: var(--sys-blue); color: #000; box-shadow: 0 0 15px var(--sys-blue); }
-.buy-btn:disabled { border-color: #444; color: #666; background: transparent; box-shadow: none; }
+.tab-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
+.scroll-list { overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px; height: 100%; }
+.scroll-list::-webkit-scrollbar { width: 4px; }
+.scroll-list::-webkit-scrollbar-thumb { background: var(--neon-blue); border-radius: 4px; }
 
-#battle-area { display: flex; flex-direction: column; align-items: center; padding: 15px 0; }
-.monster-name { color: var(--hp-red); text-shadow: 0 0 10px var(--hp-red); font-size: 24px; margin-bottom: 8px; letter-spacing: 2px;}
-#monster-container { margin-top: 20px; position: relative; cursor: crosshair; }
-#monster-sprite { width: 160px; height: 160px; object-fit: contain; filter: drop-shadow(0 0 20px rgba(255, 42, 42, 0.6)); animation: float 3s infinite ease-in-out; }
+.points-alert { text-align: center; font-size: 18px; font-weight: bold; margin-bottom: 15px; }
+.stat-item { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.4); padding: 12px 15px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid var(--neon-blue); font-size: 18px;}
+.stat-item .val { font-weight: bold; color: var(--text-main); }
+.up-btn, .buy-btn { background: var(--neon-blue); color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 0 10px rgba(59, 130, 246, 0.4); }
+.up-btn:hover, .buy-btn:hover { background: var(--neon-blue-glow); transform: scale(1.05); }
+.buy-btn:disabled, .up-btn[style*="display: none"] { background: #374151; color: #9ca3af; box-shadow: none; cursor: not-allowed; transform: none; }
 
-@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-.hit-shake { animation: shake 0.2s; filter: drop-shadow(0 0 30px #fff) brightness(2) !important; }
-@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
-
-.damage-text { position: absolute; color: white; font-weight: bold; font-size: 24px; animation: floatUp 0.6s forwards; text-shadow: 2px 2px 0 #000, 0 0 8px red; z-index: 10; pointer-events: none;}
-.crit-text { color: var(--gold); font-size: 34px; text-shadow: 2px 2px 0 #000, 0 0 15px var(--gold); }
-@keyframes floatUp { 0% { transform: translateY(0) scale(0.5); opacity: 1; } 100% { transform: translateY(-60px) scale(1); opacity: 0; } }
-
-.slash-effect { position: absolute; width: 120px; height: 2px; background: #fff; box-shadow: 0 0 15px #0ff; pointer-events: none; animation: slashAnim 0.15s forwards; transform-origin: center; z-index: 5; }
-@keyframes slashAnim { 0% { transform: scale(0); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
-
-.shop-item { border: 1px solid var(--sys-blue); padding: 10px; margin-bottom: 8px; background: rgba(0, 26, 51, 0.6); display: flex; justify-content: space-between; align-items: center; border-left: 3px solid var(--sys-blue); border-radius: 4px;}
-.shop-item-info h4 { color: #fff; margin-bottom: 4px;}
-.shop-item-info p { font-size: 14px; color: var(--sys-blue); }
-.tabs { display: flex; gap: 10px; margin-bottom: 12px; }
-.gold { color: var(--gold); text-shadow: 0 0 8px var(--gold);}
-.glow-text { color: var(--sys-blue); text-shadow: 0 0 10px var(--sys-blue); }
-
-/* --- Мобільна адаптація --- */
-@media screen and (max-width: 768px) {
-    #main-content { display: flex !important; flex-direction: column !important; height: auto; overflow-y: visible; }
-    #battle-area { order: -1; margin-bottom: 10px; border-bottom: 1px solid rgba(0, 136, 255, 0.3); padding-bottom: 15px; }
-    #attributes-panel { order: 1; margin-bottom: 10px; }
-    #shop-panel { order: 2; }
-    body { overflow-y: auto !important; height: auto !important; padding: 5px; }
-    #game-container { height: auto !important; overflow-y: visible !important; border: none; padding: 5px;}
-}
+.shop-item { background: rgba(0,0,0,0.4); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center; }
+.shop-item-info h4 { font-size: 16px; margin-bottom: 4px; color: #fff; }
+.shop-item-info p { font-size: 14px; color: var(--neon-blue-glow); }
