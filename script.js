@@ -1,13 +1,15 @@
 let tg = window.Telegram ? window.Telegram.WebApp : null;
 
-// Намагаємось розгорнути гру на весь екран, якщо це підтримується
+// Намагаємось розгорнути гру на весь екран
 try { if (tg) tg.expand(); } catch(e) {}
 
 const defaultState = {
     level: 1, exp: 0, gold: 0, statPoints: 0,
     stats: { str: 10, agi: 10, int: 10 },
     shadows: { infantry: 0, knight: 0, mage: 0 },
-    equipment: { weaponLevel: 0 }
+    equipment: { weaponLevel: 0 },
+    monsterLevel: 1, // Додано збереження рівня монстра
+    monsterHp: 50    // Додано збереження ХП монстра
 };
 
 let game = null;
@@ -34,7 +36,6 @@ const weaponData = [
 
 let monster = { level: 1, maxHp: 50, hp: 50 };
 
-// БЕЗПЕЧНА ІНІЦІАЛІЗАЦІЯ
 function initGame() {
     let isStarted = false;
     
@@ -48,6 +49,11 @@ function initGame() {
                 game = JSON.parse(JSON.stringify(defaultState));
             }
         }
+        
+        // Захист старих збережень (щоб ваш прогрес не зник)
+        if (!game.monsterLevel) game.monsterLevel = game.level;
+        if (!game.monsterHp) game.monsterHp = Math.floor(50 * Math.pow(1.5, game.monsterLevel - 1));
+
         startGameLoop();
     }
 
@@ -59,7 +65,6 @@ function initGame() {
                 }
                 start();
             });
-            // Якщо Telegram не відповідає протягом 1 секунди - запускаємо локально
             setTimeout(start, 1000);
         } else {
             start();
@@ -73,7 +78,10 @@ function startGameLoop() {
     document.getElementById('loading-screen').style.display = 'none';
     document.getElementById('game-container').style.display = 'flex';
     
-    monster.level = game.level;
+    // Відновлюємо монстра зі збереження
+    monster.level = game.monsterLevel;
+    monster.hp = game.monsterHp;
+    
     setMonsterData();
     updateUI();
 
@@ -87,6 +95,11 @@ function startGameLoop() {
 
 function saveGame() {
     if (!game) return;
+    
+    // Синхронізуємо монстра перед збереженням
+    game.monsterLevel = monster.level;
+    game.monsterHp = monster.hp;
+    
     const dataStr = JSON.stringify(game);
     localStorage.setItem('soloSave', dataStr);
     try {
@@ -98,7 +111,11 @@ function saveGame() {
 
 function setMonsterData() {
     monster.maxHp = Math.floor(50 * Math.pow(1.5, monster.level - 1));
-    monster.hp = monster.maxHp;
+    
+    // Якщо монстр вмер (HP <= 0), даємо йому повне ХП для нового рівня
+    if (monster.hp <= 0) {
+        monster.hp = monster.maxHp;
+    }
     
     let mIndex = (monster.level - 1) % monstersData.length;
     document.getElementById('monster-name').innerText = `[Lv.${monster.level}] ${monstersData[mIndex].name}`;
@@ -119,7 +136,6 @@ function getShadowDPS() {
 }
 
 function attackMonster(event) {
-    // Безпечна вібрація
     if (tg && tg.HapticFeedback) {
         try { tg.HapticFeedback.impactOccurred('light'); } catch(e) {}
     }
@@ -150,10 +166,16 @@ function attackMonster(event) {
 
 function dealDamage(amount, isClick) {
     monster.hp -= amount;
+    
     if (monster.hp <= 0) {
         monsterDefeated();
+    } else {
+        updateMonsterHPUI();
     }
-    let hpPercent = (monster.hp / monster.maxHp) * 100;
+}
+
+function updateMonsterHPUI() {
+    let hpPercent = Math.max(0, (monster.hp / monster.maxHp) * 100);
     document.getElementById('monster-hp-bar').style.width = `${hpPercent}%`;
     document.getElementById('monster-hp-text').innerText = `${Math.floor(Math.max(0, monster.hp))} / ${monster.maxHp}`;
 }
@@ -167,6 +189,8 @@ function monsterDefeated() {
     checkLevelUp();
     
     monster.level += 1;
+    monster.hp = 0; // Скидаємо ХП, щоб setMonsterData дав йому повне здоров'я
+    
     setMonsterData();
     saveGame();
     updateUI();
@@ -294,6 +318,8 @@ function updateUI() {
     document.querySelectorAll('.upgrade-btn').forEach(btn => {
         btn.style.display = game.statPoints > 0 ? 'inline-block' : 'none';
     });
+    
+    updateMonsterHPUI();
     renderShop();
 }
 
