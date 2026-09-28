@@ -1,6 +1,4 @@
 let tg = window.Telegram ? window.Telegram.WebApp : null;
-
-// Намагаємось розгорнути гру на весь екран
 try { if (tg) tg.expand(); } catch(e) {}
 
 const defaultState = {
@@ -8,8 +6,7 @@ const defaultState = {
     stats: { str: 10, agi: 10, int: 10 },
     shadows: { infantry: 0, knight: 0, mage: 0 },
     equipment: { weaponLevel: 0 },
-    monsterLevel: 1, // Додано збереження рівня монстра
-    monsterHp: 50    // Додано збереження ХП монстра
+    monsterLevel: 1, monsterHp: 50
 };
 
 let game = null;
@@ -36,21 +33,48 @@ const weaponData = [
 
 let monster = { level: 1, maxHp: 50, hp: 50 };
 
+// --- АВТОРЕЄСТРАЦІЯ (TELEGRAM ПРОФІЛЬ) ---
+function loadTelegramProfile() {
+    let playerName = "Мисливець";
+    let avatarUrl = "https://placehold.co/100/1e3a8a/white?text=S";
+    
+    // Якщо гра відкрита в Telegram, беремо дані користувача
+    if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+        const user = tg.initDataUnsafe.user;
+        playerName = user.first_name || user.username || "Мисливець";
+        if (user.photo_url) {
+            avatarUrl = user.photo_url;
+        }
+    }
+    
+    document.getElementById('player-name').innerText = playerName;
+    document.getElementById('player-avatar').src = avatarUrl;
+}
+
+// --- СИСТЕМА РАНГІВ ---
+function getPlayerRankInfo(level) {
+    if (level < 10) return { name: "Ранг E", class: "rank-e" };
+    if (level < 25) return { name: "Ранг D", class: "rank-d" };
+    if (level < 50) return { name: "Ранг C", class: "rank-c" };
+    if (level < 75) return { name: "Ранг B", class: "rank-b" };
+    if (level < 100) return { name: "Ранг A", class: "rank-a" };
+    return { name: "Ранг S", class: "rank-s" };
+}
+
 function initGame() {
     let isStarted = false;
     
     function start() {
         if (isStarted) return;
         isStarted = true;
+        
+        loadTelegramProfile(); // Підтягуємо профіль
+
         if (!game) {
-            try {
-                game = JSON.parse(localStorage.getItem('soloSave')) || JSON.parse(JSON.stringify(defaultState));
-            } catch(e) {
-                game = JSON.parse(JSON.stringify(defaultState));
-            }
+            try { game = JSON.parse(localStorage.getItem('soloSave')) || JSON.parse(JSON.stringify(defaultState)); } 
+            catch(e) { game = JSON.parse(JSON.stringify(defaultState)); }
         }
         
-        // Захист старих збережень (щоб ваш прогрес не зник)
         if (!game.monsterLevel) game.monsterLevel = game.level;
         if (!game.monsterHp) game.monsterHp = Math.floor(50 * Math.pow(1.5, game.monsterLevel - 1));
 
@@ -60,9 +84,7 @@ function initGame() {
     try {
         if (tg && tg.CloudStorage) {
             tg.CloudStorage.getItem('soloSave', function(err, val) {
-                if (!err && val) {
-                    try { game = JSON.parse(val); } catch(e) {}
-                }
+                if (!err && val) { try { game = JSON.parse(val); } catch(e) {} }
                 start();
             });
             setTimeout(start, 1000);
@@ -78,7 +100,6 @@ function startGameLoop() {
     document.getElementById('loading-screen').style.display = 'none';
     document.getElementById('game-container').style.display = 'flex';
     
-    // Відновлюємо монстра зі збереження
     monster.level = game.monsterLevel;
     monster.hp = game.monsterHp;
     
@@ -95,27 +116,16 @@ function startGameLoop() {
 
 function saveGame() {
     if (!game) return;
-    
-    // Синхронізуємо монстра перед збереженням
     game.monsterLevel = monster.level;
     game.monsterHp = monster.hp;
-    
     const dataStr = JSON.stringify(game);
     localStorage.setItem('soloSave', dataStr);
-    try {
-        if (tg && tg.CloudStorage) {
-            tg.CloudStorage.setItem('soloSave', dataStr);
-        }
-    } catch(e) {}
+    try { if (tg && tg.CloudStorage) tg.CloudStorage.setItem('soloSave', dataStr); } catch(e) {}
 }
 
 function setMonsterData() {
     monster.maxHp = Math.floor(50 * Math.pow(1.5, monster.level - 1));
-    
-    // Якщо монстр вмер (HP <= 0), даємо йому повне ХП для нового рівня
-    if (monster.hp <= 0) {
-        monster.hp = monster.maxHp;
-    }
+    if (monster.hp <= 0) monster.hp = monster.maxHp;
     
     let mIndex = (monster.level - 1) % monstersData.length;
     document.getElementById('monster-name').innerText = `[Lv.${monster.level}] ${monstersData[mIndex].name}`;
@@ -129,24 +139,19 @@ function getClickDamage() {
 }
 
 function getCritChance() { return Math.min(game.stats.agi * 0.5, 50); }
-
 function getShadowDPS() {
     let dps = game.shadows.infantry * shadowsData.infantry.dps + game.shadows.knight * shadowsData.knight.dps + game.shadows.mage * shadowsData.mage.dps;
     return Math.floor(dps * (1 + (game.stats.int - 10) * 0.02));
 }
 
 function attackMonster(event) {
-    if (tg && tg.HapticFeedback) {
-        try { tg.HapticFeedback.impactOccurred('light'); } catch(e) {}
-    }
+    if (tg && tg.HapticFeedback) { try { tg.HapticFeedback.impactOccurred('light'); } catch(e) {} }
     
     let dmg = getClickDamage();
     let isCrit = Math.random() * 100 < getCritChance();
     if (isCrit) {
         dmg *= 2;
-        if (tg && tg.HapticFeedback) {
-            try { tg.HapticFeedback.impactOccurred('heavy'); } catch(e) {}
-        }
+        if (tg && tg.HapticFeedback) { try { tg.HapticFeedback.impactOccurred('heavy'); } catch(e) {} }
     }
 
     dealDamage(dmg, true);
@@ -166,7 +171,6 @@ function attackMonster(event) {
 
 function dealDamage(amount, isClick) {
     monster.hp -= amount;
-    
     if (monster.hp <= 0) {
         monsterDefeated();
     } else {
@@ -181,15 +185,13 @@ function updateMonsterHPUI() {
 }
 
 function monsterDefeated() {
-    if (tg && tg.HapticFeedback) {
-        try { tg.HapticFeedback.notificationOccurred('success'); } catch(e) {}
-    }
+    if (tg && tg.HapticFeedback) { try { tg.HapticFeedback.notificationOccurred('success'); } catch(e) {} }
     game.exp += 20 * monster.level;
     game.gold += 5 * monster.level;
     checkLevelUp();
     
     monster.level += 1;
-    monster.hp = 0; // Скидаємо ХП, щоб setMonsterData дав йому повне здоров'я
+    monster.hp = 0; 
     
     setMonsterData();
     saveGame();
@@ -198,36 +200,31 @@ function monsterDefeated() {
 
 function checkLevelUp() {
     let maxExp = Math.floor(100 * Math.pow(1.3, game.level - 1));
+    let leveledUp = false;
     while (game.exp >= maxExp) {
         game.exp -= maxExp;
         game.level++;
         game.statPoints += 3;
         maxExp = Math.floor(100 * Math.pow(1.3, game.level - 1));
+        leveledUp = true;
+    }
+    if (leveledUp) {
+        // Якщо ранг змінився, ми це побачимо при оновленні UI
     }
 }
 
 function upgradeStat(stat) {
-    if (game.statPoints > 0) {
-        game.stats[stat]++;
-        game.statPoints--;
-        updateUI(); saveGame();
-    }
+    if (game.statPoints > 0) { game.stats[stat]++; game.statPoints--; updateUI(); saveGame(); }
 }
 
 function buyShadow(type) {
     let cost = Math.floor(shadowsData[type].baseCost * Math.pow(1.15, game.shadows[type]));
-    if (game.gold >= cost) {
-        game.gold -= cost; game.shadows[type]++;
-        updateUI(); saveGame();
-    }
+    if (game.gold >= cost) { game.gold -= cost; game.shadows[type]++; updateUI(); saveGame(); }
 }
 
 function buyWeapon() {
     let nextWep = weaponData[game.equipment.weaponLevel];
-    if (nextWep && game.gold >= nextWep.cost) {
-        game.gold -= nextWep.cost; game.equipment.weaponLevel++;
-        updateUI(); saveGame();
-    }
+    if (nextWep && game.gold >= nextWep.cost) { game.gold -= nextWep.cost; game.equipment.weaponLevel++; updateUI(); saveGame(); }
 }
 
 function showDamageText(x, y, dmg, isCrit) {
@@ -269,30 +266,14 @@ function renderShop() {
     let shadowsHTML = '';
     for (const [key, data] of Object.entries(shadowsData)) {
         let cost = Math.floor(data.baseCost * Math.pow(1.15, game.shadows[key]));
-        shadowsHTML += `
-            <div class="shop-item">
-                <div class="shop-item-info">
-                    <h4>${data.name} [Lv.${game.shadows[key]}]</h4>
-                    <p>DPS: ${data.dps}</p>
-                </div>
-                <button class="buy-btn" ${game.gold < cost ? 'disabled' : ''} onclick="buyShadow('${key}')">${cost} G</button>
-            </div>
-        `;
+        shadowsHTML += `<div class="shop-item"><div class="shop-item-info"><h4>${data.name} [Lv.${game.shadows[key]}]</h4><p>DPS: ${data.dps}</p></div><button class="buy-btn" ${game.gold < cost ? 'disabled' : ''} onclick="buyShadow('${key}')">${cost} G</button></div>`;
     }
     document.getElementById('shadows-list').innerHTML = shadowsHTML;
 
     let eqHTML = '';
     let nextWep = weaponData[game.equipment.weaponLevel];
     if (nextWep) {
-        eqHTML = `
-            <div class="shop-item">
-                <div class="shop-item-info">
-                    <h4>${nextWep.name}</h4>
-                    <p>Урон: x${nextWep.multiplier}</p>
-                </div>
-                <button class="buy-btn" ${game.gold < nextWep.cost ? 'disabled' : ''} onclick="buyWeapon()">${nextWep.cost} G</button>
-            </div>
-        `;
+        eqHTML = `<div class="shop-item"><div class="shop-item-info"><h4>${nextWep.name}</h4><p>Урон: x${nextWep.multiplier}</p></div><button class="buy-btn" ${game.gold < nextWep.cost ? 'disabled' : ''} onclick="buyWeapon()">${nextWep.cost} G</button></div>`;
     } else {
         eqHTML = `<p style="text-align:center; color: var(--accent-glow); margin-top:10px;">Всі предмети куплено!</p>`;
     }
@@ -300,6 +281,12 @@ function renderShop() {
 }
 
 function updateUI() {
+    // Оновлення рангу
+    let rankInfo = getPlayerRankInfo(game.level);
+    let rankEl = document.getElementById('player-rank');
+    rankEl.innerText = rankInfo.name;
+    rankEl.className = rankInfo.class;
+
     document.getElementById('level-display').innerText = game.level;
     document.getElementById('gold-display').innerText = Math.floor(game.gold);
     document.getElementById('click-dmg-display').innerText = getClickDamage();
@@ -331,5 +318,4 @@ function resetGame() {
     }
 }
 
-// Запуск
 initGame();
