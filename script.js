@@ -1,5 +1,7 @@
-const tg = window.Telegram.WebApp;
-tg.expand(); // Розгортаємо гру на весь екран у Telegram
+let tg = window.Telegram ? window.Telegram.WebApp : null;
+
+// Намагаємось розгорнути гру на весь екран, якщо це підтримується
+try { if (tg) tg.expand(); } catch(e) {}
 
 const defaultState = {
     level: 1, exp: 0, gold: 0, statPoints: 0,
@@ -10,7 +12,6 @@ const defaultState = {
 
 let game = null;
 
-// Дані про монстрів (Можете замінити посилання на власні картинки, завантажені на GitHub)
 const monstersData = [
     { name: "Слабкий Гоблін", img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Goblin.png" },
     { name: "Синій Вовк", img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Wolf.png" },
@@ -33,21 +34,38 @@ const weaponData = [
 
 let monster = { level: 1, maxHp: 50, hp: 50 };
 
-// Ініціалізація та Завантаження з Telegram CloudStorage
+// БЕЗПЕЧНА ІНІЦІАЛІЗАЦІЯ
 function initGame() {
-    // Спочатку пробуємо завантажити з Telegram Cloud, якщо не вийшло - з localStorage
-    if (tg.CloudStorage) {
-        tg.CloudStorage.getItem('soloSave', function(err, val) {
-            if (!err && val) {
-                game = JSON.parse(val);
-            } else {
+    let isStarted = false;
+    
+    function start() {
+        if (isStarted) return;
+        isStarted = true;
+        if (!game) {
+            try {
                 game = JSON.parse(localStorage.getItem('soloSave')) || JSON.parse(JSON.stringify(defaultState));
+            } catch(e) {
+                game = JSON.parse(JSON.stringify(defaultState));
             }
-            startGameLoop();
-        });
-    } else {
-        game = JSON.parse(localStorage.getItem('soloSave')) || JSON.parse(JSON.stringify(defaultState));
+        }
         startGameLoop();
+    }
+
+    try {
+        if (tg && tg.CloudStorage) {
+            tg.CloudStorage.getItem('soloSave', function(err, val) {
+                if (!err && val) {
+                    try { game = JSON.parse(val); } catch(e) {}
+                }
+                start();
+            });
+            // Якщо Telegram не відповідає протягом 1 секунди - запускаємо локально
+            setTimeout(start, 1000);
+        } else {
+            start();
+        }
+    } catch (error) {
+        start();
     }
 }
 
@@ -55,17 +73,15 @@ function startGameLoop() {
     document.getElementById('loading-screen').style.display = 'none';
     document.getElementById('game-container').style.display = 'flex';
     
-    monster.level = game.level; // Прив'язуємо рівень монстра до рівня гравця
+    monster.level = game.level;
     setMonsterData();
     updateUI();
 
-    // Автоклік Тіней (Loop)
     setInterval(() => {
         let dps = getShadowDPS();
         if (dps > 0) dealDamage(Math.max(1, dps / 10), false);
     }, 100);
 
-    // Автозбереження кожні 5 секунд
     setInterval(saveGame, 5000);
 }
 
@@ -73,22 +89,22 @@ function saveGame() {
     if (!game) return;
     const dataStr = JSON.stringify(game);
     localStorage.setItem('soloSave', dataStr);
-    if (tg.CloudStorage) {
-        tg.CloudStorage.setItem('soloSave', dataStr);
-    }
+    try {
+        if (tg && tg.CloudStorage) {
+            tg.CloudStorage.setItem('soloSave', dataStr);
+        }
+    } catch(e) {}
 }
 
 function setMonsterData() {
     monster.maxHp = Math.floor(50 * Math.pow(1.5, monster.level - 1));
     monster.hp = monster.maxHp;
     
-    // Вибираємо фото та ім'я в залежності від рівня
     let mIndex = (monster.level - 1) % monstersData.length;
     document.getElementById('monster-name').innerText = `[Lv.${monster.level}] ${monstersData[mIndex].name}`;
     document.getElementById('monster-sprite').src = monstersData[mIndex].img;
 }
 
-// Обчислення характеристик
 function getClickDamage() {
     let baseDmg = game.stats.str * 2;
     let weaponMult = game.equipment.weaponLevel > 0 ? weaponData[game.equipment.weaponLevel - 1].multiplier : 1;
@@ -96,25 +112,29 @@ function getClickDamage() {
 }
 
 function getCritChance() { return Math.min(game.stats.agi * 0.5, 50); }
+
 function getShadowDPS() {
     let dps = game.shadows.infantry * shadowsData.infantry.dps + game.shadows.knight * shadowsData.knight.dps + game.shadows.mage * shadowsData.mage.dps;
     return Math.floor(dps * (1 + (game.stats.int - 10) * 0.02));
 }
 
-// Атака кліком
 function attackMonster(event) {
-    tg.HapticFeedback.impactOccurred('light'); // Вібрація на телефоні
+    // Безпечна вібрація
+    if (tg && tg.HapticFeedback) {
+        try { tg.HapticFeedback.impactOccurred('light'); } catch(e) {}
+    }
     
     let dmg = getClickDamage();
     let isCrit = Math.random() * 100 < getCritChance();
     if (isCrit) {
         dmg *= 2;
-        tg.HapticFeedback.impactOccurred('heavy'); // Сильна вібрація при криті
+        if (tg && tg.HapticFeedback) {
+            try { tg.HapticFeedback.impactOccurred('heavy'); } catch(e) {}
+        }
     }
 
     dealDamage(dmg, true);
     
-    // Координати для анімації (якщо клік мишкою/пальцем)
     let rect = document.getElementById('monster-container').getBoundingClientRect();
     let x = event.clientX ? event.clientX - rect.left : rect.width / 2;
     let y = event.clientY ? event.clientY - rect.top : rect.height / 2;
@@ -122,10 +142,9 @@ function attackMonster(event) {
     showDamageText(x, y, dmg, isCrit);
     createSlashEffect(x, y);
     
-    // Анімація трясіння
     const sprite = document.getElementById('monster-sprite');
     sprite.classList.remove('hit-shake');
-    void sprite.offsetWidth; // Магія для перезапуску CSS анімації
+    void sprite.offsetWidth; 
     sprite.classList.add('hit-shake');
 }
 
@@ -134,14 +153,15 @@ function dealDamage(amount, isClick) {
     if (monster.hp <= 0) {
         monsterDefeated();
     }
-    // Оновлюємо ХП бар частіше для плавності
     let hpPercent = (monster.hp / monster.maxHp) * 100;
     document.getElementById('monster-hp-bar').style.width = `${hpPercent}%`;
     document.getElementById('monster-hp-text').innerText = `${Math.floor(Math.max(0, monster.hp))} / ${monster.maxHp}`;
 }
 
 function monsterDefeated() {
-    tg.HapticFeedback.notificationOccurred('success');
+    if (tg && tg.HapticFeedback) {
+        try { tg.HapticFeedback.notificationOccurred('success'); } catch(e) {}
+    }
     game.exp += 20 * monster.level;
     game.gold += 5 * monster.level;
     checkLevelUp();
@@ -207,7 +227,6 @@ function createSlashEffect(x, y) {
     slash.style.left = `${x - 50}px`;
     slash.style.top = `${y}px`;
     
-    // Випадковий кут порізу
     let angle = Math.random() * 360;
     slash.style.transform = `rotate(${angle}deg)`;
     
@@ -281,7 +300,7 @@ function updateUI() {
 function resetGame() {
     if(confirm('Видалити збереження назавжди?')) {
         localStorage.removeItem('soloSave');
-        if (tg.CloudStorage) tg.CloudStorage.removeItem('soloSave');
+        try { if (tg && tg.CloudStorage) tg.CloudStorage.removeItem('soloSave'); } catch(e) {}
         location.reload();
     }
 }
