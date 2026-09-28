@@ -4,88 +4,75 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Solo Leveling: System</title>
+    <!-- Підключення Telegram API -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Підключення Firebase (База Даних) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <!-- Шрифт -->
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="loading-screen">СИСТЕМА ЗАВАНТАЖУЄТЬСЯ...</div>
+    <div id="loading-screen">
+        <div class="system-loader">[ СИСТЕМА ПІДКЛЮЧАЄТЬСЯ... ]</div>
+    </div>
 
     <div id="game-container" style="display: none;">
-        <!-- ОНОВЛЕНИЙ БЛОК ПРОФІЛЮ -->
+        <!-- ПРОФІЛЬ ГРАВЦЯ -->
         <header id="player-status">
             <div class="profile-section">
-                <img id="player-avatar" src="https://placehold.co/100/1e3a8a/white?text=M" alt="Avatar">
+                <img id="player-avatar" src="https://placehold.co/100/003366/white?text=M" alt="Avatar">
                 <div class="profile-info">
                     <h2 id="player-name">Мисливець</h2>
                     <p><span id="player-rank">Ранг E</span> | LVL: <span id="level-display">1</span></p>
                 </div>
             </div>
-            
             <div class="exp-bar-container">
                 <div id="exp-bar"></div>
                 <span id="exp-text">0 / 100 XP</span>
             </div>
-            
             <div class="header-stats">
-                <p>💰 <span id="gold-display" class="gold">0</span> G</p>
+                <p>💰 <span id="gold-display" class="gold">0</span></p>
                 <p>⚔️ Урон: <span id="click-dmg-display">10</span></p>
-                <p>👥 DPS: <span id="dps-display">0</span>/с</p>
+                <p>👥 DPS: <span id="dps-display">0</span></p>
             </div>
         </header>
 
         <main id="main-content">
+            <!-- АТРИБУТИ -->
             <aside class="panel" id="attributes-panel">
-                <h3>[ Атрибути ]</h3>
+                <h3>[ ХАРАКТЕРИСТИКИ ]</h3>
                 <p class="points-avail">Очки: <span id="stat-points" class="glow-text">0</span></p>
-                
-                <div class="stat-row">
-                    <span>STR (Сила)</span>
-                    <span id="stat-str">10</span>
-                    <button class="upgrade-btn" onclick="upgradeStat('str')">+</button>
-                </div>
-                <div class="stat-row">
-                    <span>AGI (Сприт)</span>
-                    <span id="stat-agi">10</span>
-                    <button class="upgrade-btn" onclick="upgradeStat('agi')">+</button>
-                </div>
-                <div class="stat-row">
-                    <span>INT (Інтел)</span>
-                    <span id="stat-int">10</span>
-                    <button class="upgrade-btn" onclick="upgradeStat('int')">+</button>
-                </div>
+                <div class="stat-row"><span>STR (Сила)</span><span id="stat-str">10</span><button class="upgrade-btn" onclick="upgradeStat('str')">+</button></div>
+                <div class="stat-row"><span>AGI (Сприт)</span><span id="stat-agi">10</span><button class="upgrade-btn" onclick="upgradeStat('agi')">+</button></div>
+                <div class="stat-row"><span>INT (Інтел)</span><span id="stat-int">10</span><button class="upgrade-btn" onclick="upgradeStat('int')">+</button></div>
             </aside>
 
+            <!-- БІЙ З МОНСТРОМ -->
             <section id="battle-area">
                 <h3 id="monster-name" class="monster-name">Гоблін</h3>
                 <div class="hp-bar-container">
                     <div id="monster-hp-bar"></div>
                     <span id="monster-hp-text">50 / 50</span>
                 </div>
-                
                 <div id="monster-container" onclick="attackMonster(event)">
                     <img id="monster-sprite" src="" alt="Monster">
                     <div id="damage-numbers-container"></div>
                 </div>
             </section>
 
+            <!-- МАГАЗИН -->
             <aside class="panel" id="shop-panel">
                 <div class="tabs">
-                    <button class="tab-btn active" onclick="switchTab('shadows')">Тіні</button>
-                    <button class="tab-btn" onclick="switchTab('equipment')">Зброя</button>
+                    <button class="tab-btn active" onclick="switchTab('shadows')">АРМІЯ ТІНЕЙ</button>
+                    <button class="tab-btn" onclick="switchTab('equipment')">ЕКІПІРУВАННЯ</button>
                 </div>
-                <div id="tab-shadows" class="tab-content active">
-                    <div id="shadows-list"></div>
-                </div>
-                <div id="tab-equipment" class="tab-content" style="display: none;">
-                    <div id="equipment-list"></div>
-                </div>
+                <div id="tab-shadows" class="tab-content active"><div id="shadows-list"></div></div>
+                <div id="tab-equipment" class="tab-content" style="display: none;"><div id="equipment-list"></div></div>
             </aside>
         </main>
-        
-        <button id="reset-btn" onclick="resetGame()">Скинути прогрес</button>
     </div>
-
     <script src="script.js"></script>
 </body>
 </html>
