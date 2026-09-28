@@ -2,34 +2,38 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Solo Leveling: System</title>
-    <link rel="stylesheet" href="style.css">
+    <!-- Підключення Telegram API -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Геймерський шрифт -->
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="game-container">
-        <!-- Верхня панель (Статус гравця) -->
+    <!-- Екран завантаження -->
+    <div id="loading-screen">СИСТЕМА ЗАВАНТАЖУЄТЬСЯ...</div>
+
+    <div id="game-container" style="display: none;">
         <header id="player-status">
             <div class="header-info">
-                <h2>Рівень: <span id="level-display">1</span></h2>
+                <h2>LVL: <span id="level-display">1</span></h2>
                 <div class="exp-bar-container">
                     <div id="exp-bar"></div>
                     <span id="exp-text">0 / 100 XP</span>
                 </div>
             </div>
             <div class="header-stats">
-                <p>Золото: <span id="gold-display" class="gold">0</span> G</p>
-                <p>Шкода за клік: <span id="click-dmg-display">10</span></p>
-                <p>DPS Тіней: <span id="dps-display">0</span>/сек</p>
+                <p>💰 <span id="gold-display" class="gold">0</span> G</p>
+                <p>⚔️ Урон: <span id="click-dmg-display">10</span></p>
+                <p>👥 DPS Тіней: <span id="dps-display">0</span>/с</p>
             </div>
         </header>
 
         <main id="main-content">
-            <!-- Ліва панель: Атрибути -->
             <aside class="panel" id="attributes-panel">
                 <h3>[ Атрибути ]</h3>
-                <p class="points-avail">Вільні очки: <span id="stat-points">0</span></p>
+                <p class="points-avail">Очки: <span id="stat-points" class="glow-text">0</span></p>
                 
                 <div class="stat-row">
                     <span>STR (Сила)</span>
@@ -37,24 +41,17 @@
                     <button class="upgrade-btn" onclick="upgradeStat('str')">+</button>
                 </div>
                 <div class="stat-row">
-                    <span>AGI (Спритність)</span>
+                    <span>AGI (Сприт)</span>
                     <span id="stat-agi">10</span>
                     <button class="upgrade-btn" onclick="upgradeStat('agi')">+</button>
                 </div>
                 <div class="stat-row">
-                    <span>INT (Інтелект)</span>
+                    <span>INT (Інтел)</span>
                     <span id="stat-int">10</span>
                     <button class="upgrade-btn" onclick="upgradeStat('int')">+</button>
                 </div>
-                
-                <div class="stat-info">
-                    <small>STR = +Урон від кліку</small><br>
-                    <small>AGI = +Шанс крит. удару</small><br>
-                    <small>INT = +DPS Тіней</small>
-                </div>
             </aside>
 
-            <!-- Центральна панель: Бій -->
             <section id="battle-area">
                 <h3 id="monster-name" class="monster-name">Гоблін</h3>
                 <div class="hp-bar-container">
@@ -63,22 +60,20 @@
                 </div>
                 
                 <div id="monster-container" onclick="attackMonster(event)">
-                    <div id="monster-sprite"></div>
+                    <!-- Замість квадрата тепер картинка -->
+                    <img id="monster-sprite" src="" alt="Monster">
                     <div id="damage-numbers-container"></div>
                 </div>
             </section>
 
-            <!-- Права панель: Магазин та Тіні -->
             <aside class="panel" id="shop-panel">
                 <div class="tabs">
-                    <button class="tab-btn active" onclick="switchTab('shadows')">Армія Тіней</button>
-                    <button class="tab-btn" onclick="switchTab('equipment')">Екіпірування</button>
+                    <button class="tab-btn active" onclick="switchTab('shadows')">Тіні</button>
+                    <button class="tab-btn" onclick="switchTab('equipment')">Зброя</button>
                 </div>
-
                 <div id="tab-shadows" class="tab-content active">
                     <div id="shadows-list"></div>
                 </div>
-
                 <div id="tab-equipment" class="tab-content" style="display: none;">
                     <div id="equipment-list"></div>
                 </div>
