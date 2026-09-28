@@ -1,34 +1,29 @@
-// Початковий стан гри
+const tg = window.Telegram.WebApp;
+tg.expand(); // Розгортаємо гру на весь екран у Telegram
+
 const defaultState = {
-    level: 1,
-    exp: 0,
-    gold: 0,
-    statPoints: 0,
-    stats: {
-        str: 10, // Сила (Урон кліку)
-        agi: 10, // Спритність (Крит)
-        int: 10  // Інтелект (Урон тіней)
-    },
-    shadows: {
-        infantry: 0,
-        knight: 0,
-        mage: 0
-    },
-    equipment: {
-        weaponLevel: 0
-    }
+    level: 1, exp: 0, gold: 0, statPoints: 0,
+    stats: { str: 10, agi: 10, int: 10 },
+    shadows: { infantry: 0, knight: 0, mage: 0 },
+    equipment: { weaponLevel: 0 }
 };
 
-let game = JSON.parse(localStorage.getItem('soloLevelingSave')) || JSON.parse(JSON.stringify(defaultState));
+let game = null;
 
-// Налаштування магазину Тіней
+// Дані про монстрів (Можете замінити посилання на власні картинки, завантажені на GitHub)
+const monstersData = [
+    { name: "Слабкий Гоблін", img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Goblin.png" },
+    { name: "Синій Вовк", img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Animals/Wolf.png" },
+    { name: "Вищий Орк", img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Ogre.png" },
+    { name: "Король Демонів", img: "https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Skull.png" }
+];
+
 const shadowsData = {
-    infantry: { name: "Тіньовий Піхотинець", baseCost: 50, dps: 2 },
-    knight: { name: "Тіньовий Лицар", baseCost: 500, dps: 15 },
-    mage: { name: "Вищий Орк-Маг", baseCost: 5000, dps: 100 }
+    infantry: { name: "Тінь-Піхотинець", baseCost: 50, dps: 2 },
+    knight: { name: "Тінь-Лицар", baseCost: 500, dps: 15 },
+    mage: { name: "Ігріс", baseCost: 5000, dps: 100 }
 };
 
-// Налаштування Екіпірування (Зброя дає множник урону)
 const weaponData = [
     { name: "Зламаний Кинджал", cost: 100, multiplier: 1.5 },
     { name: "Ікло Касаки", cost: 1000, multiplier: 3.0 },
@@ -36,12 +31,62 @@ const weaponData = [
     { name: "Гнів Короля Демонів", cost: 25000, multiplier: 20.0 }
 ];
 
-// Ворог
-let monster = {
-    level: 1,
-    maxHp: 50,
-    hp: 50
-};
+let monster = { level: 1, maxHp: 50, hp: 50 };
+
+// Ініціалізація та Завантаження з Telegram CloudStorage
+function initGame() {
+    // Спочатку пробуємо завантажити з Telegram Cloud, якщо не вийшло - з localStorage
+    if (tg.CloudStorage) {
+        tg.CloudStorage.getItem('soloSave', function(err, val) {
+            if (!err && val) {
+                game = JSON.parse(val);
+            } else {
+                game = JSON.parse(localStorage.getItem('soloSave')) || JSON.parse(JSON.stringify(defaultState));
+            }
+            startGameLoop();
+        });
+    } else {
+        game = JSON.parse(localStorage.getItem('soloSave')) || JSON.parse(JSON.stringify(defaultState));
+        startGameLoop();
+    }
+}
+
+function startGameLoop() {
+    document.getElementById('loading-screen').style.display = 'none';
+    document.getElementById('game-container').style.display = 'flex';
+    
+    monster.level = game.level; // Прив'язуємо рівень монстра до рівня гравця
+    setMonsterData();
+    updateUI();
+
+    // Автоклік Тіней (Loop)
+    setInterval(() => {
+        let dps = getShadowDPS();
+        if (dps > 0) dealDamage(Math.max(1, dps / 10), false);
+    }, 100);
+
+    // Автозбереження кожні 5 секунд
+    setInterval(saveGame, 5000);
+}
+
+function saveGame() {
+    if (!game) return;
+    const dataStr = JSON.stringify(game);
+    localStorage.setItem('soloSave', dataStr);
+    if (tg.CloudStorage) {
+        tg.CloudStorage.setItem('soloSave', dataStr);
+    }
+}
+
+function setMonsterData() {
+    monster.maxHp = Math.floor(50 * Math.pow(1.5, monster.level - 1));
+    monster.hp = monster.maxHp;
+    
+    // Вибираємо фото та ім'я в залежності від рівня
+    let mIndex = (monster.level - 1) % monstersData.length;
+    document.getElementById('monster-name').innerText = `[Lv.${monster.level}] ${monstersData[mIndex].name}`;
+    document.getElementById('monster-sprite').src = monstersData[mIndex].img;
+}
 
 // Обчислення характеристик
 function getClickDamage() {
@@ -50,62 +95,61 @@ function getClickDamage() {
     return Math.floor(baseDmg * weaponMult);
 }
 
-function getCritChance() {
-    return Math.min(game.stats.agi * 0.5, 50); // Максимум 50%
-}
-
+function getCritChance() { return Math.min(game.stats.agi * 0.5, 50); }
 function getShadowDPS() {
-    let dps = 0;
-    dps += game.shadows.infantry * shadowsData.infantry.dps;
-    dps += game.shadows.knight * shadowsData.knight.dps;
-    dps += game.shadows.mage * shadowsData.mage.dps;
-    
-    // Інтелект збільшує урон тіней (кожні 1 INT = +2%)
-    let intMult = 1 + (game.stats.int - 10) * 0.02; 
-    return Math.floor(dps * intMult);
+    let dps = game.shadows.infantry * shadowsData.infantry.dps + game.shadows.knight * shadowsData.knight.dps + game.shadows.mage * shadowsData.mage.dps;
+    return Math.floor(dps * (1 + (game.stats.int - 10) * 0.02));
 }
 
-// Функція атаки по кліку
+// Атака кліком
 function attackMonster(event) {
+    tg.HapticFeedback.impactOccurred('light'); // Вібрація на телефоні
+    
     let dmg = getClickDamage();
     let isCrit = Math.random() * 100 < getCritChance();
-    
-    if (isCrit) dmg *= 2; // Крит завдає х2 шкоди
+    if (isCrit) {
+        dmg *= 2;
+        tg.HapticFeedback.impactOccurred('heavy'); // Сильна вібрація при криті
+    }
 
-    dealDamage(dmg);
-    showDamageText(event.clientX, event.clientY, dmg, isCrit);
+    dealDamage(dmg, true);
     
-    // Анімація монстра
+    // Координати для анімації (якщо клік мишкою/пальцем)
+    let rect = document.getElementById('monster-container').getBoundingClientRect();
+    let x = event.clientX ? event.clientX - rect.left : rect.width / 2;
+    let y = event.clientY ? event.clientY - rect.top : rect.height / 2;
+    
+    showDamageText(x, y, dmg, isCrit);
+    createSlashEffect(x, y);
+    
+    // Анімація трясіння
     const sprite = document.getElementById('monster-sprite');
-    sprite.style.backgroundColor = 'white';
-    setTimeout(() => sprite.style.backgroundColor = '#ef4444', 50);
+    sprite.classList.remove('hit-shake');
+    void sprite.offsetWidth; // Магія для перезапуску CSS анімації
+    sprite.classList.add('hit-shake');
 }
 
-// Загальна функція отримання шкоди монстром
-function dealDamage(amount) {
+function dealDamage(amount, isClick) {
     monster.hp -= amount;
     if (monster.hp <= 0) {
         monsterDefeated();
     }
-    updateUI();
+    // Оновлюємо ХП бар частіше для плавності
+    let hpPercent = (monster.hp / monster.maxHp) * 100;
+    document.getElementById('monster-hp-bar').style.width = `${hpPercent}%`;
+    document.getElementById('monster-hp-text').innerText = `${Math.floor(Math.max(0, monster.hp))} / ${monster.maxHp}`;
 }
 
 function monsterDefeated() {
-    // Нагорода
-    let expGain = 20 * monster.level;
-    let goldGain = 5 * monster.level;
-    
-    game.exp += expGain;
-    game.gold += goldGain;
-    
+    tg.HapticFeedback.notificationOccurred('success');
+    game.exp += 20 * monster.level;
+    game.gold += 5 * monster.level;
     checkLevelUp();
     
-    // Наступний монстр
     monster.level += 1;
-    monster.maxHp = Math.floor(50 * Math.pow(1.5, monster.level - 1));
-    monster.hp = monster.maxHp;
-    
+    setMonsterData();
     saveGame();
+    updateUI();
 }
 
 function checkLevelUp() {
@@ -113,7 +157,7 @@ function checkLevelUp() {
     while (game.exp >= maxExp) {
         game.exp -= maxExp;
         game.level++;
-        game.statPoints += 3; // +3 очки статів за рівень
+        game.statPoints += 3;
         maxExp = Math.floor(100 * Math.pow(1.3, game.level - 1));
     }
 }
@@ -122,57 +166,53 @@ function upgradeStat(stat) {
     if (game.statPoints > 0) {
         game.stats[stat]++;
         game.statPoints--;
-        updateUI();
-        saveGame();
+        updateUI(); saveGame();
     }
 }
 
-// Автоклік Тіней (Loop)
-setInterval(() => {
-    let dps = getShadowDPS();
-    if (dps > 0) {
-        dealDamage(Math.max(1, dps / 10)); // Викликається кожні 100мс
-    }
-}, 100);
-
-// Купівля тіней
 function buyShadow(type) {
     let cost = Math.floor(shadowsData[type].baseCost * Math.pow(1.15, game.shadows[type]));
     if (game.gold >= cost) {
-        game.gold -= cost;
-        game.shadows[type]++;
-        renderShop();
-        updateUI();
-        saveGame();
+        game.gold -= cost; game.shadows[type]++;
+        updateUI(); saveGame();
     }
 }
 
-// Купівля зброї
 function buyWeapon() {
     let nextWep = weaponData[game.equipment.weaponLevel];
     if (nextWep && game.gold >= nextWep.cost) {
-        game.gold -= nextWep.cost;
-        game.equipment.weaponLevel++;
-        renderShop();
-        updateUI();
-        saveGame();
+        game.gold -= nextWep.cost; game.equipment.weaponLevel++;
+        updateUI(); saveGame();
     }
 }
 
-// UI Логіка
 function showDamageText(x, y, dmg, isCrit) {
-    const container = document.getElementById('damage-numbers-container');
+    const container = document.getElementById('monster-container');
     const text = document.createElement('div');
     text.className = `damage-text ${isCrit ? 'crit-text' : ''}`;
     text.innerText = dmg;
     
-    // Випадкове відхилення
-    let offsetX = (Math.random() - 0.5) * 40;
-    text.style.left = `calc(50% + ${offsetX}px)`;
-    text.style.top = '40%';
+    let offsetX = (Math.random() - 0.5) * 60;
+    text.style.left = `${x + offsetX}px`;
+    text.style.top = `${y - 20}px`;
     
     container.appendChild(text);
     setTimeout(() => text.remove(), 800);
+}
+
+function createSlashEffect(x, y) {
+    const container = document.getElementById('monster-container');
+    const slash = document.createElement('div');
+    slash.className = 'slash-effect';
+    slash.style.left = `${x - 50}px`;
+    slash.style.top = `${y}px`;
+    
+    // Випадковий кут порізу
+    let angle = Math.random() * 360;
+    slash.style.transform = `rotate(${angle}deg)`;
+    
+    container.appendChild(slash);
+    setTimeout(() => slash.remove(), 150);
 }
 
 function switchTab(tabId) {
@@ -183,33 +223,35 @@ function switchTab(tabId) {
 }
 
 function renderShop() {
-    // Рендер Тіней
     let shadowsHTML = '';
     for (const [key, data] of Object.entries(shadowsData)) {
         let cost = Math.floor(data.baseCost * Math.pow(1.15, game.shadows[key]));
         shadowsHTML += `
             <div class="shop-item">
-                <h4>${data.name} (К-ть: ${game.shadows[key]})</h4>
-                <p>DPS: ${data.dps}</p>
-                <button class="buy-btn" ${game.gold < cost ? 'disabled' : ''} onclick="buyShadow('${key}')">Призвати: ${cost} G</button>
+                <div class="shop-item-info">
+                    <h4>${data.name} [Lv.${game.shadows[key]}]</h4>
+                    <p>DPS: ${data.dps}</p>
+                </div>
+                <button class="buy-btn" ${game.gold < cost ? 'disabled' : ''} onclick="buyShadow('${key}')">${cost} G</button>
             </div>
         `;
     }
     document.getElementById('shadows-list').innerHTML = shadowsHTML;
 
-    // Рендер Зброї
     let eqHTML = '';
     let nextWep = weaponData[game.equipment.weaponLevel];
     if (nextWep) {
         eqHTML = `
             <div class="shop-item">
-                <h4>${nextWep.name}</h4>
-                <p>Множник Урону: x${nextWep.multiplier}</p>
-                <button class="buy-btn" ${game.gold < nextWep.cost ? 'disabled' : ''} onclick="buyWeapon()">Купити: ${nextWep.cost} G</button>
+                <div class="shop-item-info">
+                    <h4>${nextWep.name}</h4>
+                    <p>Урон: x${nextWep.multiplier}</p>
+                </div>
+                <button class="buy-btn" ${game.gold < nextWep.cost ? 'disabled' : ''} onclick="buyWeapon()">${nextWep.cost} G</button>
             </div>
         `;
     } else {
-        eqHTML = `<p style="color: var(--accent-glow)">Ви купили всю зброю!</p>`;
+        eqHTML = `<p style="text-align:center; color: var(--accent-glow); margin-top:10px;">Всі предмети куплено!</p>`;
     }
     document.getElementById('equipment-list').innerHTML = eqHTML;
 }
@@ -225,39 +267,24 @@ function updateUI() {
     document.getElementById('stat-int').innerText = game.stats.int;
     document.getElementById('stat-points').innerText = game.statPoints;
     
-    // Оновлення смужок
     let maxExp = Math.floor(100 * Math.pow(1.3, game.level - 1));
     let expPercent = (game.exp / maxExp) * 100;
     document.getElementById('exp-bar').style.width = `${expPercent}%`;
     document.getElementById('exp-text').innerText = `${Math.floor(game.exp)} / ${maxExp} XP`;
-    
-    let hpPercent = (monster.hp / monster.maxHp) * 100;
-    document.getElementById('monster-hp-bar').style.width = `${hpPercent}%`;
-    document.getElementById('monster-hp-text').innerText = `${Math.floor(Math.max(0, monster.hp))} / ${monster.maxHp}`;
-    document.getElementById('monster-name').innerText = `Монстр Рівень ${monster.level}`;
 
-    // Ховаємо кнопки плюсів, якщо немає очок
     document.querySelectorAll('.upgrade-btn').forEach(btn => {
         btn.style.display = game.statPoints > 0 ? 'inline-block' : 'none';
     });
-
-    renderShop(); // Оновлюємо кнопки (доступні/недоступні)
-}
-
-function saveGame() {
-    localStorage.setItem('soloLevelingSave', JSON.stringify(game));
+    renderShop();
 }
 
 function resetGame() {
-    if(confirm('Ви впевнені, що хочете видалити збереження і почати заново?')) {
-        localStorage.removeItem('soloLevelingSave');
+    if(confirm('Видалити збереження назавжди?')) {
+        localStorage.removeItem('soloSave');
+        if (tg.CloudStorage) tg.CloudStorage.removeItem('soloSave');
         location.reload();
     }
 }
 
-// Ініціалізація
-monster.maxHp = Math.floor(50 * Math.pow(1.5, monster.level - 1));
-monster.hp = monster.maxHp;
-updateUI();
-// Зберігаємо кожні 5 секунд про всяк випадок
-setInterval(saveGame, 5000);
+// Запуск
+initGame();
